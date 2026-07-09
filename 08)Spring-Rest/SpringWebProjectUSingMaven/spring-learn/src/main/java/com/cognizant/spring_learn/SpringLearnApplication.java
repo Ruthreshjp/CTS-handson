@@ -15,7 +15,6 @@ public class SpringLearnApplication {
 
 		SpringApplication.run(SpringLearnApplication.class, args);
 
-		LOGGER.info("Inside main");
-
+		LOGGER.info("Inside main()");
 	}
 }

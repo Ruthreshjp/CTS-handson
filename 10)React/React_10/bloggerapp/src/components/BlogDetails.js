@@ -2,8 +2,8 @@ function BlogDetails() {
     return (
         <div>
             <h2>Blog Details</h2>
-            <p>Blog Title: Learning React</p>
-            <p>Author: Ruthresh</p>
+            <p>DN-5.0 </p>
+            <p>Cognizant</p>
         </div>
     );
 }

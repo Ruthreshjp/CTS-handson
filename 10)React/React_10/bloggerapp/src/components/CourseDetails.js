@@ -2,8 +2,8 @@ function CourseDetails() {
     return (
         <div>
             <h2>Course Details</h2>
-            <p>Course Name: CTS DN:5.0</p>
-            <p>Duration: 3 Months</p>
+            <p>Deepskkilling</p>
+            <p>4/5/2026</p>
         </div>
     );
 }

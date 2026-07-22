@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { EnrollmentService } from '../../services/enrollment.service';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
 import { Course } from '../../models/course.model';
+import { selectEnrolledCourses } from '../../store/enrollment/enrollment.selectors';
+import * as CourseActions from '../../store/course/course.actions';
 
 @Component({
   selector: 'app-student-profile',
@@ -11,19 +14,13 @@ import { Course } from '../../models/course.model';
   styleUrl: './student-profile.css',
 })
 export class StudentProfile implements OnInit {
-  enrolledCourses: Course[] = [];
+  enrolledCourses$!: Observable<Course[]>;
 
-  constructor(private enrollmentService: EnrollmentService) {}
+  constructor(private store: Store) {}
 
   ngOnInit(): void {
-    this.refreshEnrolledCourses();
-  }
-
-  refreshEnrolledCourses(): void {
-    this.enrollmentService.getEnrolledCourses().subscribe({
-      next: courses => this.enrolledCourses = courses,
-      error: err => console.error('Error fetching enrolled courses:', err)
-    });
+    // Ensure courses are loaded so we can resolve the full course details
+    this.store.dispatch(CourseActions.loadCourses());
+    this.enrolledCourses$ = this.store.select(selectEnrolledCourses);
   }
 }
-

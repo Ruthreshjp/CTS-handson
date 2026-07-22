@@ -22,7 +22,7 @@
   </p>
 
   <button type="button" (click)="toggleEnrollment(); $event.stopPropagation()">
-    {{ isEnrolled ? 'Unenroll' : 'Enroll' }}
+    {{ (isEnrolled$ | async) ? 'Unenroll' : 'Enroll' }}
   </button>
 </div>
 

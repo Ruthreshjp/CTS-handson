@@ -1,8 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
+import { map, take } from 'rxjs/operators';
 import { CreditLabelPipe } from '../../pipes/credit-label.pipe';
-import { EnrollmentService } from '../../services/enrollment.service';
+
+import * as EnrollmentActions from '../../store/enrollment/enrollment.actions';
+import { selectEnrolledIds } from '../../store/enrollment/enrollment.selectors';
 
 interface CourseCardModel {
   id: number;
@@ -20,7 +25,7 @@ interface CourseCardModel {
   templateUrl: './course-card.html',
   styleUrl: './course-card.css'
 })
-export class CourseCardComponent implements OnChanges {
+export class CourseCardComponent implements OnChanges, OnInit {
 
   @Input()
   course!: CourseCardModel;
@@ -29,11 +34,18 @@ export class CourseCardComponent implements OnChanges {
   enrollRequested = new EventEmitter<number>();
 
   isExpanded = false;
+  isEnrolled$!: Observable<boolean>;
 
   constructor(
-    private enrollmentService: EnrollmentService,
+    private store: Store,
     private router: Router
   ) {}
+
+  ngOnInit(): void {
+    this.isEnrolled$ = this.store.select(selectEnrolledIds).pipe(
+      map(ids => ids.includes(this.course.id))
+    );
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     console.log('Course Changed:', changes);
@@ -62,21 +74,20 @@ export class CourseCardComponent implements OnChanges {
     this.isExpanded = !this.isExpanded;
   }
 
-  get isEnrolled(): boolean {
-    return this.enrollmentService.isEnrolled(this.course.id);
-  }
-
   toggleEnrollment(): void {
-    if (this.enrollmentService.isEnrolled(this.course.id)) {
-      this.enrollmentService.unenroll(this.course.id);
-    } else {
-      this.enrollmentService.enroll(this.course.id);
-    }
+    this.isEnrolled$.pipe(take(1)).subscribe(isEnrolled => {
+      if (isEnrolled) {
+        this.store.dispatch(EnrollmentActions.unenrollFromCourse({ courseId: this.course.id }));
+      } else {
+        this.store.dispatch(EnrollmentActions.enrollInCourse({ courseId: this.course.id }));
+      }
+      // Still emit for any parent components tracking the interaction
+      this.enrollRequested.emit(this.course.id);
+    });
   }
 
   navigateToCourseDetail(event: Event): void {
     event.stopPropagation();
     this.router.navigate(['/courses', this.course.id]);
   }
-
 }

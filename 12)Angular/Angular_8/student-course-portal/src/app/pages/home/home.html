@@ -33,7 +33,7 @@ Searching for :
 {{searchTerm}}
 
 </p>
-<h1><p>Available Courses : {{ courseCount }}</p></h1>
+<h1><p>Available Courses : {{ courseCount$ | async }}</p></h1>
 
 <app-course-summary-widget></app-course-summary-widget>
 

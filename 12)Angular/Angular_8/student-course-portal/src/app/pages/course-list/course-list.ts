@@ -1,13 +1,17 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
+import { Observable, Subject, map, combineLatest, switchMap, takeUntil } from 'rxjs';
+
 import { CourseCardComponent } from '../../components/course-card/course-card';
 import { HighlightDirective } from '../../directives/highlight.directive';
-import { CourseService } from '../../services/course.service';
-import { EnrollmentService } from '../../services/enrollment.service';
 import { Course } from '../../models/course.model';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, switchMap, takeUntil } from 'rxjs';
+
+import * as CourseActions from '../../store/course/course.actions';
+import { selectAllCourses, selectCoursesLoading, selectCoursesError } from '../../store/course/course.selectors';
+import { EnrollmentService } from '../../services/enrollment.service';
 
 @Component({
   selector: 'app-course-list',
@@ -17,29 +21,45 @@ import { Subject, switchMap, takeUntil } from 'rxjs';
   styleUrl: './course-list.css'
 })
 export class CourseListComponent implements OnInit, OnDestroy {
-  isLoading = true;
-  errorMessage = '';
-
-  allCourses: Course[] = [];
-  courses: Course[] = [];
+  isLoading$: Observable<boolean>;
+  errorMessage$: Observable<string | null>;
+  courses$: Observable<Course[]>;
 
   selectedCourseId = 0;
   searchTerm = '';
 
-  // switchMap cancels the previous inner Observable when a new courseId arrives. 
-  // This prevents old HTTP responses from appearing after a newer selection.
   private courseSelection$ = new Subject<number>();
   private destroy$ = new Subject<void>();
 
   constructor(
-    private courseService: CourseService,
-    private enrollmentService: EnrollmentService,
+    private store: Store,
     private route: ActivatedRoute,
-    private router: Router
-  ) {}
+    private router: Router,
+    private enrollmentService: EnrollmentService // kept for the switchMap demo if desired
+  ) {
+    this.isLoading$ = this.store.select(selectCoursesLoading);
+    this.errorMessage$ = this.store.select(selectCoursesError);
+    
+    // Combine the search term from the route with the courses from the store
+    this.courses$ = combineLatest([
+      this.store.select(selectAllCourses),
+      this.route.queryParamMap
+    ]).pipe(
+      map(([courses, params]) => {
+        const search = params.get('search') || '';
+        this.searchTerm = search;
+        if (!search) return courses;
+        const term = search.toLowerCase();
+        return courses.filter(course =>
+          course.name.toLowerCase().includes(term) ||
+          course.code.toLowerCase().includes(term)
+        );
+      })
+    );
+  }
 
   ngOnInit(): void {
-    this.loadCourses();
+    this.store.dispatch(CourseActions.loadCourses());
 
     this.courseSelection$
       .pipe(
@@ -47,31 +67,9 @@ export class CourseListComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: (students) => console.log('Students for selected course (switchMap demo):', students),
+        next: (students) => console.log('Students for selected course:', students),
         error: (err) => console.error('Error fetching students:', err)
       });
-  }
-
-  loadCourses(): void {
-    this.isLoading = true;
-    this.errorMessage = '';
-    this.courseService.getCourses().subscribe({
-      next: (courses) => {
-        this.allCourses = courses;
-        this.isLoading = false;
-        
-        // Apply existing filters
-        this.route.queryParamMap.subscribe(params => {
-          const search = params.get('search');
-          this.searchTerm = search || '';
-          this.filterCourses();
-        });
-      },
-      error: (err) => {
-        this.errorMessage = err.message || 'Failed to load courses. Please try again.';
-        this.isLoading = false;
-      }
-    });
   }
 
   onSearchChange(): void {
@@ -80,19 +78,6 @@ export class CourseListComponent implements OnInit, OnDestroy {
       queryParams: { search: this.searchTerm || null },
       queryParamsHandling: 'merge'
     });
-    this.filterCourses();
-  }
-
-  filterCourses(): void {
-    if (!this.searchTerm) {
-      this.courses = [...this.allCourses];
-    } else {
-      const term = this.searchTerm.toLowerCase();
-      this.courses = this.allCourses.filter(course =>
-        course.name.toLowerCase().includes(term) ||
-        course.code.toLowerCase().includes(term)
-      );
-    }
   }
 
   trackByCourseId(index: number, course: Course): number {
@@ -100,46 +85,9 @@ export class CourseListComponent implements OnInit, OnDestroy {
   }
 
   onEnroll(courseId: number): void {
-    console.log('Enrolling in course: ' + courseId);
+    console.log('Enrolling in course (from child output): ' + courseId);
     this.selectedCourseId = courseId;
     this.courseSelection$.next(courseId);
-  }
-
-  testCreate(): void {
-    const newCourse: Omit<Course, 'id'> = {
-      name: 'New Test Course',
-      code: 'TEST101',
-      credits: 3,
-      gradeStatus: 'pending'
-    };
-    this.courseService.createCourse(newCourse).subscribe({
-      next: () => {
-        console.log('Course created successfully');
-        this.loadCourses();
-      },
-      error: (err) => console.error('Create failed', err)
-    });
-  }
-
-  testUpdate(courseId: number): void {
-    const updates: Partial<Course> = { name: 'Updated Course Name' };
-    this.courseService.updateCourse(courseId, updates).subscribe({
-      next: () => {
-        console.log('Course updated successfully');
-        this.loadCourses();
-      },
-      error: (err) => console.error('Update failed', err)
-    });
-  }
-
-  testDelete(courseId: number): void {
-    this.courseService.deleteCourse(courseId).subscribe({
-      next: () => {
-        console.log('Course deleted successfully');
-        this.loadCourses();
-      },
-      error: (err) => console.error('Delete failed', err)
-    });
   }
 
   ngOnDestroy(): void {

@@ -33,7 +33,7 @@ export class CourseCardComponent implements OnChanges {
   constructor(
     private enrollmentService: EnrollmentService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnChanges(changes: SimpleChanges): void {
     console.log('Course Changed:', changes);

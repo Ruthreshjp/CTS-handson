@@ -29,8 +29,8 @@ describe('CourseCardComponent', () => {
   });
 
   it('should toggle expanded state', () => {
-    expect(component.isExpanded).toBeFalse();
+    expect(component.isExpanded).toBe(false);
     component.toggleDetails();
-    expect(component.isExpanded).toBeTrue();
+    expect(component.isExpanded).toBe(true);
   });
 });

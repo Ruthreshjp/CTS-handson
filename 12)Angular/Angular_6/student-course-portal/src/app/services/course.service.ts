@@ -5,6 +5,8 @@ import { Course } from '../models/course.model';
   providedIn: 'root'
 })
 export class CourseService {
+  // providedIn: 'root' makes this service a singleton - one instance shared across the entire application.
+  // All components that inject CourseService will receive the same instance, ensuring shared state.
   private courses: Course[] = [
     { id: 1, name: 'Java', code: 'JAVA101', credits: 4, gradeStatus: 'passed' },
     { id: 2, name: 'Angular', code: 'ANG201', credits: 3, gradeStatus: 'pending' },
